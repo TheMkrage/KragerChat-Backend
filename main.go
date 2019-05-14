@@ -25,10 +25,14 @@ var connected_clients = make(map[*websocket.Conn]bool)
 var broadcast = make(chan Message)
 
 // Define our message object
+type Photo struct {
+	Name string `json:"name"`
+	ID   int    `json:"id"`
+}
+
 type Message struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	Message  string `json:"message"`
+	Contents string `json:"contents"`
+	Sender   string `json:"sender"`
 }
 
 // Configure the upgrader
@@ -86,11 +90,12 @@ func handleConnections(c *gin.Context) {
 	// Register our new client
 	connected_clients[ws] = true
 	for {
+		fmt.Printf("print")
 		var msg Message
 		// Read in a new message as JSON and map it to a Message object
 		err := ws.ReadJSON(&msg)
 		if err != nil {
-			log.Printf("error: %v", err)
+			fmt.Printf("error: %v", err)
 			delete(connected_clients, ws)
 			break
 		}
@@ -115,6 +120,7 @@ func handleMessages() {
 }
 
 func main() {
+	os.Setenv("PORT", "8000")
 	port := os.Getenv("PORT")
 
 	if port == "" {
@@ -133,6 +139,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error opening database: %q", err)
 	}
+
+	// checks origin before allowing upgrade to connection
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
 	router := gin.New()
 	router.Use(gin.Logger())
