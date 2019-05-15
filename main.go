@@ -29,6 +29,7 @@ type Photo struct {
 type Message struct {
 	Contents       string `json:"contents"`
 	Sender         string `json:"sender"`
+	Photo          Photo  `json:"photo"`
 	ConnectionInfo ConnectionInfo
 }
 
