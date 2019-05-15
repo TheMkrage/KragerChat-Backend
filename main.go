@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	_ "github.com/lib/pq"
 	"github.com/russross/blackfriday"
 )
@@ -21,9 +20,6 @@ var (
 	db     *sql.DB
 )
 
-var connected_clients = make(map[*websocket.Conn]bool)
-var broadcast = make(chan Message)
-
 // Define our message object
 type Photo struct {
 	Name string `json:"name"`
@@ -31,12 +27,10 @@ type Photo struct {
 }
 
 type Message struct {
-	Contents string `json:"contents"`
-	Sender   string `json:"sender"`
+	Contents       string `json:"contents"`
+	Sender         string `json:"sender"`
+	ConnectionInfo ConnectionInfo
 }
-
-// Configure the upgrader
-var upgrader = websocket.Upgrader{}
 
 func repeatFunc(c *gin.Context) {
 	var buffer bytes.Buffer
@@ -75,47 +69,6 @@ func dbFunc(c *gin.Context) {
 			return
 		}
 		c.String(http.StatusOK, fmt.Sprintf("Read from DB: %s\n", tick.String()))
-	}
-}
-
-// Chat methods
-func handleConnections(c *gin.Context) {
-	// Upgrade initial GET request to a socket
-	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer ws.Close()
-
-	// Register our new client
-	connected_clients[ws] = true
-	for {
-		fmt.Printf("print")
-		var msg Message
-		// Read in a new message as JSON and map it to a Message object
-		err := ws.ReadJSON(&msg)
-		if err != nil {
-			fmt.Printf("error: %v", err)
-			delete(connected_clients, ws)
-			break
-		}
-		// broadcast new message
-		broadcast <- msg
-	}
-}
-
-func handleMessages() {
-	for {
-		msg := <-broadcast
-		// Send msg to all connected
-		for client := range connected_clients {
-			err := client.WriteJSON(msg)
-			if err != nil {
-				log.Printf("error: %v", err)
-				client.Close()
-				delete(connected_clients, client)
-			}
-		}
 	}
 }
 
