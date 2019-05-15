@@ -74,7 +74,7 @@ func dbFunc(c *gin.Context) {
 }
 
 func main() {
-	os.Setenv("PORT", "8000")
+	//os.Setenv("PORT", "8000")
 	port := os.Getenv("PORT")
 
 	if port == "" {
