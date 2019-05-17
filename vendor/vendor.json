@@ -83,6 +83,18 @@
 			"revision": "d9558e5c97f85372afee28cf2b6059d7d3818919"
 		},
 		{
+			"checksumSHA1": "c6Sj4kZBVN5dzhp0uTTp7Pc+euo=",
+			"path": "google.golang.org/appengine",
+			"revision": "311d3c5cf9373249645db030e53c37c209a8b378",
+			"revisionTime": "2019-05-15T04:47:07Z"
+		},
+		{
+			"checksumSHA1": "5XkGWfndn+Th+AOFw9u7xLO8Qp8=",
+			"path": "google.golang.org/appengine/datastore",
+			"revision": "311d3c5cf9373249645db030e53c37c209a8b378",
+			"revisionTime": "2019-05-15T04:47:07Z"
+		},
+		{
 			"checksumSHA1": "P7dBpV3QA/3GJWGNwb9Hn3BzCQs=",
 			"comment": "v5.9.1",
 			"path": "gopkg.in/bluesuncorp/validator.v5",
