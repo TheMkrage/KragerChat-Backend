@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -65,7 +66,7 @@ func createThread(c *gin.Context) {
 // POST /threads/:id/join
 func joinThread(c *gin.Context) {
 	ctx := appengine.NewContext(c.Request)
-	id := c.Param("id")
+	id, _ := strconv.Atoi(c.Param("id"))
 	apn_token := c.PostForm("apn_token")
 
 	subscription := Subscription{ThreadID: id, APN_Token: apn_token}
