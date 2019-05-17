@@ -3,6 +3,18 @@
 	"ignore": "test",
 	"package": [
 		{
+			"path": "appengine",
+			"revision": ""
+		},
+		{
+			"path": "appengine_internal",
+			"revision": ""
+		},
+		{
+			"path": "appengine_internal/base",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "Qq7Gzany1n6gK6hpZQq9UXFhGGo=",
 			"comment": "v1.0rc1-110-g4cc2de6",
 			"path": "github.com/gin-gonic/gin",
@@ -107,8 +119,10 @@
 			"revisionTime": "2019-05-15T04:47:07Z"
 		},
 		{
+			"checksumSHA1": "mqxlap2M+qVsEvWvXZ4hOfwLVvw=",
 			"path": "google.golang.org/appengine/datastore/internal/cloudpb",
-			"revision": ""
+			"revision": "311d3c5cf9373249645db030e53c37c209a8b378",
+			"revisionTime": "2019-05-15T04:47:07Z"
 		},
 		{
 			"checksumSHA1": "/R9+Y0jX9ijye8Ea6oh/RBwOOg4=",
@@ -123,8 +137,10 @@
 			"revisionTime": "2019-05-15T04:47:07Z"
 		},
 		{
+			"checksumSHA1": "5PakGXEgSbyFptkhGO8MnGf7uH0=",
 			"path": "google.golang.org/appengine/internal/base",
-			"revision": ""
+			"revision": "311d3c5cf9373249645db030e53c37c209a8b378",
+			"revisionTime": "2019-05-15T04:47:07Z"
 		},
 		{
 			"checksumSHA1": "3DZ+Ah5hFQb1/nh1+li2VE+kkfk=",
@@ -133,8 +149,10 @@
 			"revisionTime": "2019-05-15T04:47:07Z"
 		},
 		{
+			"checksumSHA1": "HJQ4JM9YWfwIe4vmAgXC7J/1T3E=",
 			"path": "google.golang.org/appengine/internal/log",
-			"revision": ""
+			"revision": "311d3c5cf9373249645db030e53c37c209a8b378",
+			"revisionTime": "2019-05-15T04:47:07Z"
 		},
 		{
 			"checksumSHA1": "rPcVt7Td1StpB6Z9DiShhu753PM=",
@@ -143,8 +161,10 @@
 			"revisionTime": "2019-05-15T04:47:07Z"
 		},
 		{
+			"checksumSHA1": "hApgRLSl7w9XG2waJxdH/o0A398=",
 			"path": "google.golang.org/appengine/internal/remote_api",
-			"revision": ""
+			"revision": "311d3c5cf9373249645db030e53c37c209a8b378",
+			"revisionTime": "2019-05-15T04:47:07Z"
 		},
 		{
 			"checksumSHA1": "P7dBpV3QA/3GJWGNwb9Hn3BzCQs=",
