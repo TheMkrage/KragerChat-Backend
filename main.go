@@ -1,22 +1,20 @@
 package main
 
 import (
-	"database/sql"
+	"context"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
 
+	"cloud.google.com/go/datastore"
 	"github.com/gin-gonic/gin"
+	"google.golang.org/api/option"
 	"google.golang.org/appengine"
-	"google.golang.org/appengine/datastore"
 )
 
-var (
-	repeat int
-	db     *sql.DB
-)
+var client *datastore.Client
 
 // Define our message object
 type Photo struct {
@@ -47,16 +45,20 @@ type Subscription struct {
 func createThread(c *gin.Context) {
 	ctx := appengine.NewContext(c.Request)
 
-	id, err := datastore.NewQuery("Thread").Count(ctx)
+	q := datastore.NewQuery("Thread")
+	id, err := client.Count(ctx, q)
 	if err != nil {
+		log.Printf("error: %v", err)
 		c.Writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	key := datastore.NewIncompleteKey(ctx, "Thread", nil)
+	log.Printf("key stuff")
+	key := datastore.IncompleteKey("Thread", nil)
 	name := c.Query("name")
 	thread := Thread{ID: id, Name: name}
-	if _, err := datastore.Put(ctx, key, thread); err != nil {
+	if _, err := client.Put(ctx, key, &thread); err != nil {
+		log.Printf("error: %v", err)
 		c.Writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -70,9 +72,10 @@ func joinThread(c *gin.Context) {
 	apn_token := c.PostForm("apn_token")
 
 	subscription := Subscription{ThreadID: id, APN_Token: apn_token}
-	key := datastore.NewIncompleteKey(ctx, "Subscription", nil)
+	key := datastore.IncompleteKey("Subscription", nil)
 
-	if _, err := datastore.Put(ctx, key, subscription); err != nil {
+	if _, err := client.Put(ctx, key, &subscription); err != nil {
+		log.Printf("error: %v", err)
 		c.Writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -80,13 +83,20 @@ func joinThread(c *gin.Context) {
 }
 
 func main() {
-	//os.Setenv("PORT", "8000")
+	os.Setenv("PORT", "8000")
 	port := os.Getenv("PORT")
 
 	if port == "" {
 		log.Fatal("$PORT must be set")
 	}
 
+	// init google datastore connection
+	c, err := datastore.NewClient(context.Background(),
+		"kragerchat", option.WithCredentialsFile("./KragerChat-fa2b8563afa1.json"))
+	client = c
+	if err != nil {
+		log.Printf("error: %v", err)
+	}
 	// checks origin before allowing upgrade to connection
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
