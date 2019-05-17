@@ -46,14 +46,15 @@ type Subscription struct {
 func createThread(c *gin.Context) {
 	ctx := appengine.NewContext(c.Request)
 
-	key := datastore.NewIncompleteKey(ctx, "Thread", nil)
 	id, err := datastore.NewQuery("Thread").Count(ctx)
 	if err != nil {
 		c.Writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	thread := Thread{ID: id, Name: "Chatroom 1"}
+	key := datastore.NewIncompleteKey(ctx, "Thread", nil)
+	name := c.Query("name")
+	thread := Thread{ID: id, Name: name}
 	if _, err := datastore.Put(ctx, key, thread); err != nil {
 		c.Writer.WriteHeader(http.StatusInternalServerError)
 		return
@@ -63,8 +64,18 @@ func createThread(c *gin.Context) {
 
 // POST /threads/:id/join
 func joinThread(c *gin.Context) {
-	//ctx := appengine.NewContext(c.Request)
-	//id := c.Param("id")
+	ctx := appengine.NewContext(c.Request)
+	id := c.Param("id")
+	apn_token := c.PostForm("apn_token")
+
+	subscription := Subscription{ThreadID: id, APN_Token: apn_token}
+	key := datastore.NewIncompleteKey(ctx, "Subscription", nil)
+
+	if _, err := datastore.Put(ctx, key, subscription); err != nil {
+		c.Writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	c.JSON(http.StatusCreated, subscription)
 }
 
 func main() {
