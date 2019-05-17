@@ -107,6 +107,10 @@
 			"revisionTime": "2019-05-15T04:47:07Z"
 		},
 		{
+			"path": "google.golang.org/appengine/datastore/internal/cloudpb",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "/R9+Y0jX9ijye8Ea6oh/RBwOOg4=",
 			"path": "google.golang.org/appengine/internal",
 			"revision": "311d3c5cf9373249645db030e53c37c209a8b378",
@@ -119,16 +123,28 @@
 			"revisionTime": "2019-05-15T04:47:07Z"
 		},
 		{
+			"path": "google.golang.org/appengine/internal/base",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "3DZ+Ah5hFQb1/nh1+li2VE+kkfk=",
 			"path": "google.golang.org/appengine/internal/datastore",
 			"revision": "311d3c5cf9373249645db030e53c37c209a8b378",
 			"revisionTime": "2019-05-15T04:47:07Z"
 		},
 		{
+			"path": "google.golang.org/appengine/internal/log",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "rPcVt7Td1StpB6Z9DiShhu753PM=",
 			"path": "google.golang.org/appengine/internal/modules",
 			"revision": "311d3c5cf9373249645db030e53c37c209a8b378",
 			"revisionTime": "2019-05-15T04:47:07Z"
+		},
+		{
+			"path": "google.golang.org/appengine/internal/remote_api",
+			"revision": ""
 		},
 		{
 			"checksumSHA1": "P7dBpV3QA/3GJWGNwb9Hn3BzCQs=",
