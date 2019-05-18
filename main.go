@@ -27,7 +27,7 @@ type Message struct {
 	Sender         string `json:"sender"`
 	Photo          Photo  `json:"photo"`
 	ConnectionInfo ConnectionInfo
-	ThreadID       int
+	ThreadID       int `json:"threadID"`
 	Posted         time.Time
 }
 
@@ -55,7 +55,7 @@ func createThread(c *gin.Context) {
 
 	log.Printf("key stuff")
 	key := datastore.IncompleteKey("Thread", nil)
-	name := c.Query("name")
+	name := c.PostForm("name")
 	thread := Thread{ID: id, Name: name}
 	if _, err := client.Put(ctx, key, &thread); err != nil {
 		log.Printf("error: %v", err)
