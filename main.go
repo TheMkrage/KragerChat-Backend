@@ -41,6 +41,23 @@ type Subscription struct {
 	ThreadID  int
 }
 
+// Get /threads/:id/message
+func getMessages(c *gin.Context) {
+	ctx := appengine.NewContext(c.Request)
+	threadID, _ := strconv.Atoi(c.Param("id"))
+	log.Printf("id: %v", threadID)
+	q := datastore.NewQuery("Message").Order("Posted").Filter("ThreadID =", threadID)
+	var messages []Message
+	_, err := client.GetAll(ctx, q, &messages)
+	if err != nil {
+		log.Printf("error: %v", err)
+		c.Writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusCreated, messages)
+}
+
 // POST /threads
 func createThread(c *gin.Context) {
 	ctx := appengine.NewContext(c.Request)
@@ -53,7 +70,6 @@ func createThread(c *gin.Context) {
 		return
 	}
 
-	log.Printf("key stuff")
 	key := datastore.IncompleteKey("Thread", nil)
 	name := c.PostForm("name")
 	thread := Thread{ID: id, Name: name}
@@ -105,6 +121,7 @@ func main() {
 
 	router.POST("/threads/:id/join", joinThread)
 	router.POST("/threads", createThread)
+	router.GET("/threads/:id/messages", getMessages)
 	router.GET("/ws", handleConnections)
 
 	// Start listening for incoming chat messages

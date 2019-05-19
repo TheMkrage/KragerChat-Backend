@@ -3,10 +3,14 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"strconv"
+	"time"
 
+	"cloud.google.com/go/datastore"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"google.golang.org/appengine"
 )
 
 type ConnectionInfo struct {
@@ -63,6 +67,14 @@ func handleConnections(c *gin.Context) {
 			fmt.Printf("error: %v", err)
 			delete(connected_clients, ws)
 			break
+		}
+		msg.Posted = time.Now()
+		ctx := appengine.NewContext(c.Request)
+		key := datastore.IncompleteKey("Message", nil)
+		if _, err := client.Put(ctx, key, &msg); err != nil {
+			log.Printf("error: %v", err)
+			c.Writer.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		// set the corresponding connection Info and broadcast new message
 		msg.ConnectionInfo = connected_clients[ws]
