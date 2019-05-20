@@ -45,8 +45,10 @@ type Subscription struct {
 func getMessages(c *gin.Context) {
 	ctx := appengine.NewContext(c.Request)
 	threadID, _ := strconv.Atoi(c.Param("id"))
-	log.Printf("id: %v", threadID)
-	q := datastore.NewQuery("Message").Order("Posted").Filter("ThreadID =", threadID)
+	page, _ := strconv.Atoi(c.Query("page"))
+	pageSize := 50
+
+	q := datastore.NewQuery("Message").Order("Posted").Filter("ThreadID =", threadID).Offset(page * pageSize).Limit(pageSize)
 	var messages []Message
 	_, err := client.GetAll(ctx, q, &messages)
 	if err != nil {
