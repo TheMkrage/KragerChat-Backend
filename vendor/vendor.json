@@ -123,6 +123,12 @@
 			"revisionTime": "2019-04-27T04:03:06Z"
 		},
 		{
+			"checksumSHA1": "odfuEY+ZGEh8i9oFZOeVTY2iyC4=",
+			"path": "github.com/hashicorp/golang-lru/simplelru",
+			"revision": "ff8f6c969d733ea46290f5efc44a6b86da64e5d1",
+			"revisionTime": "2019-05-07T12:02:21Z"
+		},
+		{
 			"checksumSHA1": "MFkrEy77SoBbEtLd3Ros+NZO35w=",
 			"path": "github.com/heroku/x/hmetrics",
 			"revision": "705849e307dd75c91728463dea5bfd08ef493e64",
@@ -174,6 +180,84 @@
 			"revisionTime": "2019-04-17T19:17:06Z"
 		},
 		{
+			"checksumSHA1": "/Ih6M1+XUakKt9tMxwgRlXN5bzw=",
+			"path": "go.opencensus.io",
+			"revision": "f24e56296b3a742d13b8368bbb1e831f9b0d2c7f",
+			"revisionTime": "2019-05-13T20:13:55Z"
+		},
+		{
+			"checksumSHA1": "KLZy3Nh+8JlI04JmBa/Jc8fxrVQ=",
+			"path": "go.opencensus.io/internal",
+			"revision": "f24e56296b3a742d13b8368bbb1e831f9b0d2c7f",
+			"revisionTime": "2019-05-13T20:13:55Z"
+		},
+		{
+			"checksumSHA1": "Dw3rpna1DwTa7TCzijInKcU49g4=",
+			"path": "go.opencensus.io/internal/tagencoding",
+			"revision": "f24e56296b3a742d13b8368bbb1e831f9b0d2c7f",
+			"revisionTime": "2019-05-13T20:13:55Z"
+		},
+		{
+			"checksumSHA1": "r6fbtPwxK4/TYUOWc7y0hXdAG4Q=",
+			"path": "go.opencensus.io/metric/metricdata",
+			"revision": "f24e56296b3a742d13b8368bbb1e831f9b0d2c7f",
+			"revisionTime": "2019-05-13T20:13:55Z"
+		},
+		{
+			"checksumSHA1": "kWj13srwY1SH5KgFecPhEfHnzVc=",
+			"path": "go.opencensus.io/metric/metricproducer",
+			"revision": "f24e56296b3a742d13b8368bbb1e831f9b0d2c7f",
+			"revisionTime": "2019-05-13T20:13:55Z"
+		},
+		{
+			"checksumSHA1": "g4c1lOdUuhHzVaE3KmtvQT1O7mc=",
+			"path": "go.opencensus.io/plugin/ocgrpc",
+			"revision": "f24e56296b3a742d13b8368bbb1e831f9b0d2c7f",
+			"revisionTime": "2019-05-13T20:13:55Z"
+		},
+		{
+			"checksumSHA1": "z+YgC5w2KkepPdhg631j1cUQl6s=",
+			"path": "go.opencensus.io/plugin/ochttp",
+			"revision": "f24e56296b3a742d13b8368bbb1e831f9b0d2c7f",
+			"revisionTime": "2019-05-13T20:13:55Z"
+		},
+		{
+			"checksumSHA1": "UZhIoErIy1tKLmVT/5huwlp6KFQ=",
+			"path": "go.opencensus.io/plugin/ochttp/propagation/b3",
+			"revision": "f24e56296b3a742d13b8368bbb1e831f9b0d2c7f",
+			"revisionTime": "2019-05-13T20:13:55Z"
+		},
+		{
+			"checksumSHA1": "q+y8X+5nDONIlJlxfkv+OtA18ds=",
+			"path": "go.opencensus.io/resource",
+			"revision": "f24e56296b3a742d13b8368bbb1e831f9b0d2c7f",
+			"revisionTime": "2019-05-13T20:13:55Z"
+		},
+		{
+			"checksumSHA1": "Cc4tRuW0IjlfAFY8BcdfMDqG0R8=",
+			"path": "go.opencensus.io/stats",
+			"revision": "f24e56296b3a742d13b8368bbb1e831f9b0d2c7f",
+			"revisionTime": "2019-05-13T20:13:55Z"
+		},
+		{
+			"checksumSHA1": "oIo4NRi6AVCfcwVfHzCXAsoZsdI=",
+			"path": "go.opencensus.io/stats/internal",
+			"revision": "f24e56296b3a742d13b8368bbb1e831f9b0d2c7f",
+			"revisionTime": "2019-05-13T20:13:55Z"
+		},
+		{
+			"checksumSHA1": "4VSlfYNT712K8cgGk9Pmhvt6eM8=",
+			"path": "go.opencensus.io/stats/view",
+			"revision": "f24e56296b3a742d13b8368bbb1e831f9b0d2c7f",
+			"revisionTime": "2019-05-13T20:13:55Z"
+		},
+		{
+			"checksumSHA1": "UZi4/aqibjJXY+mpNCqAS9rmxsY=",
+			"path": "go.opencensus.io/tag",
+			"revision": "f24e56296b3a742d13b8368bbb1e831f9b0d2c7f",
+			"revisionTime": "2019-05-13T20:13:55Z"
+		},
+		{
 			"checksumSHA1": "0O3djqX4bcg5O9LZdcinEoYeQKs=",
 			"path": "go.opencensus.io/trace",
 			"revision": "f24e56296b3a742d13b8368bbb1e831f9b0d2c7f",
@@ -196,53 +280,6 @@
 			"path": "go.opencensus.io/trace/tracestate",
 			"revision": "f24e56296b3a742d13b8368bbb1e831f9b0d2c7f",
 			"revisionTime": "2019-05-13T20:13:55Z"
-		},
-		{
-			"checksumSHA1": "hKZGpbFuCrkE4s1vxubKK1aFlfI=",
-			"path": "golang.org/x/net/context",
-			"revision": "d9558e5c97f85372afee28cf2b6059d7d3818919"
-		},
-		{
-			"checksumSHA1": "pCY4YtdNKVBYRbNvODjx8hj0hIs=",
-			"path": "golang.org/x/net/http/httpguts",
-			"revision": "3ec19112720433827bbce8be9342797f5a6aaaf9",
-			"revisionTime": "2019-05-12T12:16:34Z"
-		},
-		{
-			"checksumSHA1": "HvmG9LfStMLF+hIC7xR4SxegMis=",
-			"path": "golang.org/x/net/trace",
-			"revision": "3ec19112720433827bbce8be9342797f5a6aaaf9",
-			"revisionTime": "2019-05-12T12:16:34Z"
-		},
-		{
-			"checksumSHA1": "/94OVlOstzQP2qidGqEKOXBrzNA=",
-			"path": "golang.org/x/oauth2",
-			"revision": "9f3314589c9a9136388751d9adae6b0ed400978a",
-			"revisionTime": "2019-03-29T22:47:46Z"
-		},
-		{
-			"checksumSHA1": "7fFUz5XB2aaqP1GWCU3jXZkzw5s=",
-			"path": "golang.org/x/oauth2/google",
-			"revision": "9f3314589c9a9136388751d9adae6b0ed400978a",
-			"revisionTime": "2019-03-29T22:47:46Z"
-		},
-		{
-			"checksumSHA1": "rnUL+5Yzlt+Ky2dlB61VqfhBOb8=",
-			"path": "golang.org/x/oauth2/internal",
-			"revision": "9f3314589c9a9136388751d9adae6b0ed400978a",
-			"revisionTime": "2019-03-29T22:47:46Z"
-		},
-		{
-			"checksumSHA1": "huVltYnXdRFDJLgp/ZP9IALzG7g=",
-			"path": "golang.org/x/oauth2/jws",
-			"revision": "9f3314589c9a9136388751d9adae6b0ed400978a",
-			"revisionTime": "2019-03-29T22:47:46Z"
-		},
-		{
-			"checksumSHA1": "mwzfgZFAlEkfNHK2OYqnhIvbI+g=",
-			"path": "golang.org/x/oauth2/jwt",
-			"revision": "9f3314589c9a9136388751d9adae6b0ed400978a",
-			"revisionTime": "2019-03-29T22:47:46Z"
 		},
 		{
 			"checksumSHA1": "YIDE68w/xMptf6Nu9hHiOwXOvho=",
