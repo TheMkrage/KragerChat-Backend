@@ -21,6 +21,30 @@
 			"revisionTime": "2019-05-17T02:00:20Z"
 		},
 		{
+			"checksumSHA1": "JfGXEtr79UaxukcL05IERkjYm/g=",
+			"path": "cloud.google.com/go/internal",
+			"revision": "75150fd6c7fabd65ebdb3ca10878f9f984a6f6e5",
+			"revisionTime": "2019-05-17T02:00:20Z"
+		},
+		{
+			"checksumSHA1": "nAuvu57ZZjUeTw69aTsCBrAhOpk=",
+			"path": "cloud.google.com/go/internal/fields",
+			"revision": "75150fd6c7fabd65ebdb3ca10878f9f984a6f6e5",
+			"revisionTime": "2019-05-17T02:00:20Z"
+		},
+		{
+			"checksumSHA1": "jHOn3QLqvr1luNqyOg24/BXLrsM=",
+			"path": "cloud.google.com/go/internal/trace",
+			"revision": "75150fd6c7fabd65ebdb3ca10878f9f984a6f6e5",
+			"revisionTime": "2019-05-17T02:00:20Z"
+		},
+		{
+			"checksumSHA1": "FSifvUBJjm4OsSU5rp5s5+bqvN0=",
+			"path": "cloud.google.com/go/internal/version",
+			"revision": "75150fd6c7fabd65ebdb3ca10878f9f984a6f6e5",
+			"revisionTime": "2019-05-17T02:00:20Z"
+		},
+		{
 			"checksumSHA1": "Qq7Gzany1n6gK6hpZQq9UXFhGGo=",
 			"comment": "v1.0rc1-110-g4cc2de6",
 			"path": "github.com/gin-gonic/gin",
@@ -117,6 +141,36 @@
 			"path": "google.golang.org/appengine",
 			"revision": "311d3c5cf9373249645db030e53c37c209a8b378",
 			"revisionTime": "2019-05-15T04:47:07Z"
+		},
+		{
+			"checksumSHA1": "GlPZsxfa/OYvumlfU8+2j4cVai8=",
+			"path": "google.golang.org/genproto/googleapis/api/annotations",
+			"revision": "bb713bdc0e5239f2b68e560efbe1c701a6fe78f9",
+			"revisionTime": "2019-05-16T17:26:35Z"
+		},
+		{
+			"checksumSHA1": "hlboK4sykXom2/6NNR0ECWRUA2A=",
+			"path": "google.golang.org/genproto/googleapis/datastore/v1",
+			"revision": "bb713bdc0e5239f2b68e560efbe1c701a6fe78f9",
+			"revisionTime": "2019-05-16T17:26:35Z"
+		},
+		{
+			"checksumSHA1": "EOkBjXBkCQcsEf9fk2KOQZcJO08=",
+			"path": "google.golang.org/genproto/googleapis/rpc/code",
+			"revision": "bb713bdc0e5239f2b68e560efbe1c701a6fe78f9",
+			"revisionTime": "2019-05-16T17:26:35Z"
+		},
+		{
+			"checksumSHA1": "dU5fToNngC22+3DsebkdYv+T3jE=",
+			"path": "google.golang.org/genproto/googleapis/rpc/status",
+			"revision": "bb713bdc0e5239f2b68e560efbe1c701a6fe78f9",
+			"revisionTime": "2019-05-16T17:26:35Z"
+		},
+		{
+			"checksumSHA1": "gteeLqFLJh11LHg8RTEuKHZU0Wg=",
+			"path": "google.golang.org/genproto/googleapis/type/latlng",
+			"revision": "bb713bdc0e5239f2b68e560efbe1c701a6fe78f9",
+			"revisionTime": "2019-05-16T17:26:35Z"
 		},
 		{
 			"checksumSHA1": "r+qEgxE85cw5tTzhAoDNP5ygcQQ=",
