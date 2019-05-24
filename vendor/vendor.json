@@ -15,6 +15,12 @@
 			"revision": ""
 		},
 		{
+			"checksumSHA1": "w+gVQzkR75E0hJiCl0Na0o4XDk8=",
+			"path": "cloud.google.com/go/datastore",
+			"revision": "75150fd6c7fabd65ebdb3ca10878f9f984a6f6e5",
+			"revisionTime": "2019-05-17T02:00:20Z"
+		},
+		{
 			"checksumSHA1": "Qq7Gzany1n6gK6hpZQq9UXFhGGo=",
 			"comment": "v1.0rc1-110-g4cc2de6",
 			"path": "github.com/gin-gonic/gin",
@@ -99,6 +105,18 @@
 			"checksumSHA1": "hKZGpbFuCrkE4s1vxubKK1aFlfI=",
 			"path": "golang.org/x/net/context",
 			"revision": "d9558e5c97f85372afee28cf2b6059d7d3818919"
+		},
+		{
+			"checksumSHA1": "2AyxThTPscWdy49fGsU2tg0Uyw8=",
+			"path": "google.golang.org/api/option",
+			"revision": "a077b3e91a274d413f19288b1cd3a03435d6785b",
+			"revisionTime": "2019-05-17T00:07:01Z"
+		},
+		{
+			"checksumSHA1": "c6Sj4kZBVN5dzhp0uTTp7Pc+euo=",
+			"path": "google.golang.org/appengine",
+			"revision": "311d3c5cf9373249645db030e53c37c209a8b378",
+			"revisionTime": "2019-05-15T04:47:07Z"
 		},
 		{
 			"checksumSHA1": "P7dBpV3QA/3GJWGNwb9Hn3BzCQs=",
