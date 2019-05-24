@@ -147,50 +147,10 @@
 			"revisionTime": "2019-05-07T12:02:21Z"
 		},
 		{
-			"checksumSHA1": "MFkrEy77SoBbEtLd3Ros+NZO35w=",
-			"path": "github.com/heroku/x/hmetrics",
-			"revision": "705849e307dd75c91728463dea5bfd08ef493e64",
-			"revisionTime": "2017-10-04T17:02:40Z"
-		},
-		{
-			"checksumSHA1": "GOeW0t8PSBNHFTUHmdSgPv2kl/0=",
-			"path": "github.com/heroku/x/hmetrics/onload",
-			"revision": "705849e307dd75c91728463dea5bfd08ef493e64",
-			"revisionTime": "2017-10-04T17:02:40Z"
-		},
-		{
 			"checksumSHA1": "mvQv5UL4UV/NArpSdN+rxGSRedc=",
 			"path": "github.com/json-iterator/go",
 			"revision": "08047c174c6c03e8ec963a411bde1b6d1ee67b26",
 			"revisionTime": "2019-05-23T05:57:43Z"
-		},
-		{
-			"checksumSHA1": "F6mCaMfANCOCP8pLnk94HmRyVpg=",
-			"path": "github.com/lib/pq",
-			"revision": "2ff3cb3adc01768e0a552b3a02575a6df38a9bea",
-			"revisionTime": "2019-05-07T19:18:18Z"
-		},
-		{
-			"checksumSHA1": "ATnwV0POluBNQEMjPdylodz0oK0=",
-			"path": "github.com/lib/pq/oid",
-			"revision": "2ff3cb3adc01768e0a552b3a02575a6df38a9bea",
-			"revisionTime": "2019-05-07T19:18:18Z"
-		},
-		{
-			"checksumSHA1": "ywel3wHXnu1eLhyT1/FolporeAc=",
-			"path": "github.com/lib/pq/scram",
-			"revision": "2ff3cb3adc01768e0a552b3a02575a6df38a9bea",
-			"revisionTime": "2019-05-07T19:18:18Z"
-		},
-		{
-			"checksumSHA1": "ZUOd8OUOp+xdpB7p4w/O86Y8wyc=",
-			"path": "github.com/manucorporat/sse",
-			"revision": "c142f0f1baea5cef7f98a8a6c222f6134368c1f5"
-		},
-		{
-			"checksumSHA1": "sEvWJKs6aL3UR/p4v7idVo54urY=",
-			"path": "github.com/mattn/go-colorable",
-			"revision": "40e4aedc8fabf8c23e040057540867186712faa5"
 		},
 		{
 			"checksumSHA1": "lQlNwdfW3dVSpBhim0KHyxcHOeo=",
@@ -208,12 +168,6 @@
 			"path": "github.com/modern-go/reflect2",
 			"revision": "94122c33edd36123c84d5368cfb2b69df93a0ec8",
 			"revisionTime": "2018-07-18T01:23:57Z"
-		},
-		{
-			"checksumSHA1": "Pf+FaejEqyVGQRFMadHUrQYvSvo=",
-			"path": "github.com/russross/blackfriday",
-			"revision": "f3ccc8fc06d5d2e48a7083dcf0180c00a8a284cc",
-			"revisionTime": "2019-04-17T19:17:06Z"
 		},
 		{
 			"checksumSHA1": "gWY/fqYaFDnyQ18nkfOcI+2jw30=",
@@ -790,12 +744,6 @@
 			"path": "google.golang.org/grpc/tap",
 			"revision": "8655d473adfe8fa6619fd42cd2a001b412695b21",
 			"revisionTime": "2019-05-16T21:58:44Z"
-		},
-		{
-			"checksumSHA1": "P7dBpV3QA/3GJWGNwb9Hn3BzCQs=",
-			"comment": "v5.9.1",
-			"path": "gopkg.in/bluesuncorp/validator.v5",
-			"revision": "d627af88ac021317a280d320986282a6dc97549a"
 		},
 		{
 			"checksumSHA1": "P/k5ZGf0lEBgpKgkwy++F7K1PSg=",
