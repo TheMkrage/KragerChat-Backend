@@ -74,7 +74,7 @@ func createThread(c *gin.Context) {
 	}
 
 	key := datastore.IncompleteKey("Thread", nil)
-	name := c.PostForm("name")
+	name := c.PostForm("Name")
 	thread := Thread{ID: id, Name: name}
 	if _, err := client.Put(ctx, key, &thread); err != nil {
 		log.Printf("error: %v", err)
