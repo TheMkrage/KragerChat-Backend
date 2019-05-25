@@ -43,6 +43,7 @@ type Subscription struct {
 
 // Get /threads/:id/message
 func getMessages(c *gin.Context) {
+
 	ctx := appengine.NewContext(c.Request)
 	threadID, _ := strconv.Atoi(c.Param("id"))
 	page, _ := strconv.Atoi(c.Query("page"))

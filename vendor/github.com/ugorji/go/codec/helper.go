@@ -170,14 +170,6 @@ func init() {
 	refBitset.set(byte(reflect.Chan))
 }
 
-type handleFlag uint8
-
-const (
-	initedHandleFlag handleFlag = 1 << iota
-	binaryHandleFlag
-	jsonHandleFlag
-)
-
 type clsErr struct {
 	closed    bool  // is it closed?
 	errClosed error // error on closing
@@ -301,7 +293,6 @@ const (
 	typeInfoLoadArrayBLen      = 8 * 4
 )
 
-// typeInfoLoad is a transient object used while loading up a typeInfo.
 type typeInfoLoad struct {
 	// fNames   []string
 	// encNames []string
@@ -309,8 +300,6 @@ type typeInfoLoad struct {
 	sfis   []structFieldInfo
 }
 
-// typeInfoLoadArray is a cache object used to efficiently load up a typeInfo without
-// much allocation.
 type typeInfoLoadArray struct {
 	// fNames   [typeInfoLoadArrayLen]string
 	// encNames [typeInfoLoadArrayLen]string
@@ -319,12 +308,6 @@ type typeInfoLoadArray struct {
 	etypes [typeInfoLoadArrayEtypesLen]uintptr
 	b      [typeInfoLoadArrayBLen]byte // scratch - used for struct field names
 }
-
-// // cacheLineSafer denotes that a type is safe for cache-line access.
-// // This could mean that
-// type cacheLineSafer interface {
-// 	cacheLineSafe()
-// }
 
 // mirror json.Marshaler and json.Unmarshaler here,
 // so we don't import the encoding/json package
@@ -539,9 +522,10 @@ type BasicHandle struct {
 
 	intf2impls
 
-	EncodeOptions
+	inited uint32
+	_      uint32 // padding
 
-	DecodeOptions
+	// ---- cache line
 
 	RPCOptions
 
@@ -575,21 +559,23 @@ type BasicHandle struct {
 	//    runtime.SetFinalizer(d, (*Decoder).Release)
 	ExplicitRelease bool
 
-	// flags handleFlag // holds flag for if binaryEncoding, jsonHandler, etc
-	// be    bool       // is handle a binary encoding?
-	// js    bool       // is handle javascript handler?
-	// n  byte // first letter of handle name
-	// _  uint16 // padding
+	be bool   // is handle a binary encoding?
+	js bool   // is handle javascript handler?
+	n  byte   // first letter of handle name
+	_  uint16 // padding
 
 	// ---- cache line
 
+	DecodeOptions
+
+	// ---- cache line
+
+	EncodeOptions
+
 	// noBuiltInTypeChecker
 
-	inited uint32 // holds if inited, and also handle flags (binary encoding, json handler, etc)
-	mu     sync.Mutex
-	// _      uint32 // padding
 	rtidFns atomicRtidFnSlice
-
+	mu      sync.Mutex
 	// r []uintptr     // rtids mapped to s above
 }
 
@@ -613,29 +599,15 @@ func basicHandle(hh Handle) (x *BasicHandle) {
 	return
 }
 
-func (x *BasicHandle) isJs() bool {
-	return handleFlag(x.inited)&jsonHandleFlag != 0
-}
-
-func (x *BasicHandle) isBe() bool {
-	return handleFlag(x.inited)&binaryHandleFlag != 0
-}
-
 //go:noinline
 func (x *BasicHandle) init(hh Handle) {
 	// make it uninlineable, as it is called at most once
 	x.mu.Lock()
 	if x.inited == 0 {
-		var f = initedHandleFlag
-		if hh.isBinary() {
-			f |= binaryHandleFlag
-		}
-		if _, b := hh.(*JsonHandle); b {
-			f |= jsonHandleFlag
-		}
-		// _, x.js = hh.(*JsonHandle)
-		// x.n = hh.Name()[0]
-		atomic.StoreUint32(&x.inited, uint32(f))
+		x.be = hh.isBinary()
+		_, x.js = hh.(*JsonHandle)
+		x.n = hh.Name()[0]
+		atomic.StoreUint32(&x.inited, 1)
 	}
 	x.mu.Unlock()
 }
@@ -719,21 +691,20 @@ func (x *BasicHandle) fn(rt reflect.Type, checkFastpath, checkCodecSelfer bool) 
 		if rk == reflect.Struct || rk == reflect.Array {
 			fi.addrE = true
 		}
-	} else if supportMarshalInterfaces && c.isBe() && (ti.bm || ti.bmp) && (ti.bu || ti.bup) {
+	} else if supportMarshalInterfaces && c.be && (ti.bm || ti.bmp) && (ti.bu || ti.bup) {
 		fn.fe = (*Encoder).binaryMarshal
 		fn.fd = (*Decoder).binaryUnmarshal
 		fi.addrF = true
 		fi.addrD = ti.bup
 		fi.addrE = ti.bmp
-	} else if supportMarshalInterfaces && !c.isBe() && c.isJs() &&
-		(ti.jm || ti.jmp) && (ti.ju || ti.jup) {
+	} else if supportMarshalInterfaces && !c.be && c.js && (ti.jm || ti.jmp) && (ti.ju || ti.jup) {
 		//If JSON, we should check JSONMarshal before textMarshal
 		fn.fe = (*Encoder).jsonMarshal
 		fn.fd = (*Decoder).jsonUnmarshal
 		fi.addrF = true
 		fi.addrD = ti.jup
 		fi.addrE = ti.jmp
-	} else if supportMarshalInterfaces && !c.isBe() && (ti.tm || ti.tmp) && (ti.tu || ti.tup) {
+	} else if supportMarshalInterfaces && !c.be && (ti.tm || ti.tmp) && (ti.tu || ti.tup) {
 		fn.fe = (*Encoder).textMarshal
 		fn.fd = (*Decoder).textUnmarshal
 		fi.addrF = true
@@ -1086,7 +1057,7 @@ type extTypeTagFn struct {
 	rt      reflect.Type
 	tag     uint64
 	ext     Ext
-	// _       [1]uint64 // padding
+	_       [1]uint64 // padding
 }
 
 type extHandle []extTypeTagFn
@@ -1143,7 +1114,7 @@ func (o *extHandle) SetExt(rt reflect.Type, tag uint64, ext Ext) (err error) {
 		}
 	}
 	rtidptr := rt2id(reflect.PtrTo(rt))
-	*o = append(o2, extTypeTagFn{rtid, rtidptr, rt, tag, ext}) // , [1]uint64{}})
+	*o = append(o2, extTypeTagFn{rtid, rtidptr, rt, tag, ext, [1]uint64{}})
 	return
 }
 
@@ -1251,7 +1222,7 @@ type structFieldInfo struct {
 
 	encNameAsciiAlphaNum bool // the encName only contains ascii alphabet and numbers
 	structFieldInfoFlag
-	// _ [1]byte // padding
+	_ [1]byte // padding
 }
 
 func (si *structFieldInfo) setToZeroValue(v reflect.Value) {
@@ -1440,8 +1411,7 @@ const (
 	typeInfoFlagIsZeroerPtr
 )
 
-// typeInfo keeps static (non-changing readonly)information
-// about each (non-ptr) type referenced in the encode/decode sequence.
+// typeInfo keeps information about each (non-ptr) type referenced in the encode/decode sequence.
 //
 // During an encode/decode sequence, we work as below:
 //   - If base is a built in type, en/decode base value
@@ -1500,8 +1470,8 @@ type typeInfo struct {
 	flags              typeInfoFlag
 	infoFieldOmitempty bool
 
-	// _ [6]byte   // padding
-	// _ [2]uint64 // padding
+	_ [6]byte   // padding
+	_ [2]uint64 // padding
 }
 
 func (ti *typeInfo) isFlag(f typeInfoFlag) bool {
@@ -1539,9 +1509,8 @@ type TypeInfos struct {
 	// infos: formerly map[uintptr]*typeInfo, now *[]rtid2ti, 2 words expected
 	infos atomicTypeInfoSlice
 	mu    sync.Mutex
-	_     uint64 // padding (cache-aligned)
 	tags  []string
-	_     uint64 // padding (cache-aligned)
+	_     [2]uint64 // padding
 }
 
 // NewTypeInfos creates a TypeInfos given a set of struct tags keys.
@@ -1864,7 +1833,7 @@ func rgetResolveSFI(rt reflect.Type, x []structFieldInfo, pv *typeInfoLoadArray)
 	for i := range x {
 		ui = uint16(i)
 		xn = x[i].encName // fieldName or encName? use encName for now.
-		if len(xn)+2 > cap(sn) {
+		if len(xn)+2 > cap(pv.b) {
 			sn = make([]byte, len(xn)+2)
 		} else {
 			sn = sn[:len(xn)+2]
@@ -1881,22 +1850,24 @@ func rgetResolveSFI(rt reflect.Type, x []structFieldInfo, pv *typeInfoLoadArray)
 			sa = append(sa, 0xff, byte(ui>>8), byte(ui))
 		} else {
 			index := uint16(sa[j+len(sn)+1]) | uint16(sa[j+len(sn)])<<8
-			// one of them must be cleared (reset to nil),
-			// and the index updated appropriately
-			i2clear := ui                // index to be cleared
-			if x[i].nis < x[index].nis { // this one is shallower
-				// update the index to point to this later one.
+			// one of them must be reset to nil,
+			// and the index updated appropriately to the other one
+			if x[i].nis == x[index].nis {
+			} else if x[i].nis < x[index].nis {
 				sa[j+len(sn)], sa[j+len(sn)+1] = byte(ui>>8), byte(ui)
-				// clear the earlier one, as this later one is shallower.
-				i2clear = index
-			}
-			if x[i2clear].ready() {
-				x[i2clear].flagClr(structFieldInfoFlagReady)
-				n--
+				if x[index].ready() {
+					x[index].flagClr(structFieldInfoFlagReady)
+					n--
+				}
+			} else {
+				if x[i].ready() {
+					x[i].flagClr(structFieldInfoFlagReady)
+					n--
+				}
 			}
 		}
-	}
 
+	}
 	var w []structFieldInfo
 	sharingArray := len(x) <= typeInfoLoadArraySfisLen // sharing array with typeInfoLoadArray
 	if sharingArray {
@@ -2066,7 +2037,7 @@ type codecFn struct {
 	i  codecFnInfo
 	fe func(*Encoder, *codecFnInfo, reflect.Value)
 	fd func(*Decoder, *codecFnInfo, reflect.Value)
-	_  [1]uint64 // padding (cache-aligned)
+	_  [1]uint64 // padding
 }
 
 type codecRtidFn struct {
@@ -2158,9 +2129,7 @@ func (x checkOverflow) SignedIntV(v uint64) int64 {
 
 // ------------------ SORT -----------------
 
-// func isNaN(f float64) bool   { return f != f }
-func isNaN64(f float64) bool { return f != f }
-func isNaN32(f float32) bool { return f != f }
+func isNaN(f float64) bool { return f != f }
 
 // -----------------------
 
@@ -2178,10 +2147,131 @@ type ioBuffered interface {
 
 // -----------------------
 
+type intSlice []int64
+type uintSlice []uint64
+
+// type uintptrSlice []uintptr
+type floatSlice []float64
+type boolSlice []bool
+type stringSlice []string
+
+// type bytesSlice [][]byte
+
+func (p intSlice) Len() int           { return len(p) }
+func (p intSlice) Less(i, j int) bool { return p[uint(i)] < p[uint(j)] }
+func (p intSlice) Swap(i, j int)      { p[uint(i)], p[uint(j)] = p[uint(j)], p[uint(i)] }
+
+func (p uintSlice) Len() int           { return len(p) }
+func (p uintSlice) Less(i, j int) bool { return p[uint(i)] < p[uint(j)] }
+func (p uintSlice) Swap(i, j int)      { p[uint(i)], p[uint(j)] = p[uint(j)], p[uint(i)] }
+
+// func (p uintptrSlice) Len() int           { return len(p) }
+// func (p uintptrSlice) Less(i, j int) bool { return p[uint(i)] < p[uint(j)] }
+// func (p uintptrSlice) Swap(i, j int)      { p[uint(i)], p[uint(j)] = p[uint(j)], p[uint(i)] }
+
+func (p floatSlice) Len() int { return len(p) }
+func (p floatSlice) Less(i, j int) bool {
+	return p[uint(i)] < p[uint(j)] || isNaN(p[uint(i)]) && !isNaN(p[uint(j)])
+}
+func (p floatSlice) Swap(i, j int) { p[uint(i)], p[uint(j)] = p[uint(j)], p[uint(i)] }
+
+func (p stringSlice) Len() int           { return len(p) }
+func (p stringSlice) Less(i, j int) bool { return p[uint(i)] < p[uint(j)] }
+func (p stringSlice) Swap(i, j int)      { p[uint(i)], p[uint(j)] = p[uint(j)], p[uint(i)] }
+
+// func (p bytesSlice) Len() int           { return len(p) }
+// func (p bytesSlice) Less(i, j int) bool { return bytes.Compare(p[uint(i)], p[uint(j)]) == -1 }
+// func (p bytesSlice) Swap(i, j int)      { p[uint(i)], p[uint(j)] = p[uint(j)], p[uint(i)] }
+
+func (p boolSlice) Len() int           { return len(p) }
+func (p boolSlice) Less(i, j int) bool { return !p[uint(i)] && p[uint(j)] }
+func (p boolSlice) Swap(i, j int)      { p[uint(i)], p[uint(j)] = p[uint(j)], p[uint(i)] }
+
+// ---------------------
+
 type sfiRv struct {
 	v *structFieldInfo
 	r reflect.Value
 }
+
+type intRv struct {
+	v int64
+	r reflect.Value
+}
+type intRvSlice []intRv
+type uintRv struct {
+	v uint64
+	r reflect.Value
+}
+type uintRvSlice []uintRv
+type floatRv struct {
+	v float64
+	r reflect.Value
+}
+type floatRvSlice []floatRv
+type boolRv struct {
+	v bool
+	r reflect.Value
+}
+type boolRvSlice []boolRv
+type stringRv struct {
+	v string
+	r reflect.Value
+}
+type stringRvSlice []stringRv
+type bytesRv struct {
+	v []byte
+	r reflect.Value
+}
+type bytesRvSlice []bytesRv
+type timeRv struct {
+	v time.Time
+	r reflect.Value
+}
+type timeRvSlice []timeRv
+
+func (p intRvSlice) Len() int           { return len(p) }
+func (p intRvSlice) Less(i, j int) bool { return p[uint(i)].v < p[uint(j)].v }
+func (p intRvSlice) Swap(i, j int)      { p[uint(i)], p[uint(j)] = p[uint(j)], p[uint(i)] }
+
+func (p uintRvSlice) Len() int           { return len(p) }
+func (p uintRvSlice) Less(i, j int) bool { return p[uint(i)].v < p[uint(j)].v }
+func (p uintRvSlice) Swap(i, j int)      { p[uint(i)], p[uint(j)] = p[uint(j)], p[uint(i)] }
+
+func (p floatRvSlice) Len() int { return len(p) }
+func (p floatRvSlice) Less(i, j int) bool {
+	return p[uint(i)].v < p[uint(j)].v || isNaN(p[uint(i)].v) && !isNaN(p[uint(j)].v)
+}
+func (p floatRvSlice) Swap(i, j int) { p[uint(i)], p[uint(j)] = p[uint(j)], p[uint(i)] }
+
+func (p stringRvSlice) Len() int           { return len(p) }
+func (p stringRvSlice) Less(i, j int) bool { return p[uint(i)].v < p[uint(j)].v }
+func (p stringRvSlice) Swap(i, j int)      { p[uint(i)], p[uint(j)] = p[uint(j)], p[uint(i)] }
+
+func (p bytesRvSlice) Len() int           { return len(p) }
+func (p bytesRvSlice) Less(i, j int) bool { return bytes.Compare(p[uint(i)].v, p[uint(j)].v) == -1 }
+func (p bytesRvSlice) Swap(i, j int)      { p[uint(i)], p[uint(j)] = p[uint(j)], p[uint(i)] }
+
+func (p boolRvSlice) Len() int           { return len(p) }
+func (p boolRvSlice) Less(i, j int) bool { return !p[uint(i)].v && p[uint(j)].v }
+func (p boolRvSlice) Swap(i, j int)      { p[uint(i)], p[uint(j)] = p[uint(j)], p[uint(i)] }
+
+func (p timeRvSlice) Len() int           { return len(p) }
+func (p timeRvSlice) Less(i, j int) bool { return p[uint(i)].v.Before(p[uint(j)].v) }
+func (p timeRvSlice) Swap(i, j int)      { p[uint(i)], p[uint(j)] = p[uint(j)], p[uint(i)] }
+
+// -----------------
+
+type bytesI struct {
+	v []byte
+	i interface{}
+}
+
+type bytesISlice []bytesI
+
+func (p bytesISlice) Len() int           { return len(p) }
+func (p bytesISlice) Less(i, j int) bool { return bytes.Compare(p[uint(i)].v, p[uint(j)].v) == -1 }
+func (p bytesISlice) Swap(i, j int)      { p[uint(i)], p[uint(j)] = p[uint(j)], p[uint(i)] }
 
 // -----------------
 
@@ -2190,8 +2280,6 @@ type set []uintptr
 func (s *set) add(v uintptr) (exists bool) {
 	// e.ci is always nil, or len >= 1
 	x := *s
-	// defer func() { xdebugf("set.add: len: %d", len(x)) }()
-
 	if x == nil {
 		x = make([]uintptr, 1, 8)
 		x[0] = v
@@ -2587,16 +2675,6 @@ func xdebugf(pattern string, args ...interface{}) {
 		delim = "\n"
 	}
 	fmt.Printf("\033[1;31m"+pattern+delim+"\033[0m", args...)
-}
-
-// xdebug2f printf. the message in blue on the terminal.
-// Use it in place of fmt.Printf (which it calls internally)
-func xdebug2f(pattern string, args ...interface{}) {
-	var delim string
-	if len(pattern) > 0 && pattern[len(pattern)-1] != '\n' {
-		delim = "\n"
-	}
-	fmt.Printf("\033[1;34m"+pattern+delim+"\033[0m", args...)
 }
 
 // func isImmutableKind(k reflect.Kind) (v bool) {

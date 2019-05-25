@@ -105,9 +105,8 @@ import (
 // v7:
 // v8: current - we now maintain compatibility with old generated code.
 // v9: skipped
-// v10: modified encDriver and decDriver interfaces.
-// v11: remove deprecated methods of encDriver and decDriver.
-const genVersion = 11
+// v10: modified encDriver and decDriver interfaces. Remove deprecated methods after Jan 1, 2019
+const genVersion = 10
 
 const (
 	genCodecPkg        = "codec1978"
@@ -124,15 +123,6 @@ const (
 	//
 	// From testing, it didn't make much difference in runtime, so keep as true (one function only)
 	genUseOneFunctionForDecStructMap = true
-
-	// genFastpathCanonical configures whether we support Canonical in fast path.
-	// The savings is not much.
-	//
-	// NOTE: This MUST ALWAYS BE TRUE. fast-path.go.tmp doesn't handle it being false.
-	genFastpathCanonical = true // MUST be true
-
-	// genFastpathTrimTypes configures whether we trim uncommon fastpath types.
-	genFastpathTrimTypes = true
 )
 
 type genStructMapStyle uint8
@@ -167,11 +157,10 @@ func (x *genBuf) reset() {
 
 // genRunner holds some state used during a Gen run.
 type genRunner struct {
-	w io.Writer // output
-	c uint64    // counter used for generating varsfx
-	f uint64    // counter used for saying false
+	w io.Writer      // output
+	c uint64         // counter used for generating varsfx
+	t []reflect.Type // list of types to run selfer on
 
-	t  []reflect.Type   // list of types to run selfer on
 	tc reflect.Type     // currently running selfer on this type
 	te map[uintptr]bool // types for which the encoder has been created
 	td map[uintptr]bool // types for which the decoder has been created
@@ -303,8 +292,7 @@ func Gen(w io.Writer, buildTags, pkgName, uid string, noExtensions bool,
 	x.hn = "codecSelfer" + x.xs
 	x.line("type " + x.hn + " struct{}")
 	x.line("")
-	x.linef("func %sFalse() bool { return false }", x.hn)
-	x.line("")
+
 	x.varsfxreset()
 	x.line("func init() {")
 	x.linef("if %sGenVersion != %v {", x.cpfx, genVersion)
@@ -432,15 +420,6 @@ func (x *genRunner) genRefPkgs(t reflect.Type) {
 			}
 		}
 	}
-}
-
-// sayFalse will either say "false" or use a function call that returns false.
-func (x *genRunner) sayFalse() string {
-	x.f++
-	if x.f%2 == 0 {
-		return x.hn + "False()"
-	}
-	return "false"
 }
 
 func (x *genRunner) varsfx() string {
@@ -659,7 +638,7 @@ func (x *genRunner) registerXtraT(t reflect.Type) {
 // encVar will encode a variable.
 // The parameter, t, is the reflect.Type of the variable itself
 func (x *genRunner) encVar(varname string, t reflect.Type) {
-	// xdebugf("varname: %s, t: %v", varname, t)
+	// fmt.Printf(">>>>>> varname: %s, t: %v\n", varname, t)
 	var checkNil bool
 	switch t.Kind() {
 	case reflect.Ptr, reflect.Interface, reflect.Slice, reflect.Map, reflect.Chan:
@@ -835,7 +814,7 @@ func (x *genRunner) enc(varname string, t reflect.Type) {
 		if rtid == uint8SliceTypId {
 			x.line("r.EncodeStringBytesRaw([]byte(" + varname + "))")
 		} else if fastpathAV.index(rtid) != -1 {
-			g := x.newFastpathGenV(t)
+			g := x.newGenV(t)
 			x.line("z.F." + g.MethodNamePfx("Enc", false) + "V(" + varname + ", e)")
 		} else {
 			x.xtraSM(varname, t, true, false)
@@ -849,7 +828,7 @@ func (x *genRunner) enc(varname string, t reflect.Type) {
 		// - else call Encoder.encode(XXX) on it.
 		// x.line("if " + varname + " == nil { \nr.EncodeNil()\n } else { ")
 		if fastpathAV.index(rtid) != -1 {
-			g := x.newFastpathGenV(t)
+			g := x.newGenV(t)
 			x.line("z.F." + g.MethodNamePfx("Enc", false) + "V(" + varname + ", e)")
 		} else {
 			x.xtraSM(varname, t, true, false)
@@ -889,11 +868,6 @@ func (x *genRunner) encZero(t reflect.Type) {
 	}
 }
 
-func (x *genRunner) doEncOmitEmptyLine(t2 reflect.StructField, varname string, buf *genBuf) {
-	x.f = 0
-	x.encOmitEmptyLine(t2, varname, buf)
-}
-
 func (x *genRunner) encOmitEmptyLine(t2 reflect.StructField, varname string, buf *genBuf) {
 	// smartly check omitEmpty on a struct type, as it may contain uncomparable map/slice/etc.
 	// also, for maps/slices/arrays, check if len ! 0 (not if == zero value)
@@ -916,7 +890,7 @@ func (x *genRunner) encOmitEmptyLine(t2 reflect.StructField, varname string, buf
 			break
 		}
 		// buf.s("(")
-		buf.s(x.sayFalse()) // buf.s("false")
+		buf.s("false")
 		for i, n := 0, t2.Type.NumField(); i < n; i++ {
 			f := t2.Type.Field(i)
 			if f.PkgPath != "" { // unexported
@@ -936,7 +910,6 @@ func (x *genRunner) encOmitEmptyLine(t2 reflect.StructField, varname string, buf
 }
 
 func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
-	// xdebug2f("encStruct, varname: %s, t: %s", varname, t)
 	// Use knowledge from structfieldinfo (mbs, encodable fields. Ignore omitempty. )
 	// replicate code in kStruct i.e. for each field, deref type to non-pointer, and call x.enc on it
 
@@ -995,7 +968,7 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 					}
 				}
 			}
-			x.doEncOmitEmptyLine(t2, varname, &omitline)
+			x.encOmitEmptyLine(t2, varname, &omitline)
 			x.linef("%s, // %s", omitline.v(), si.fieldName)
 		}
 		x.line("}")
@@ -1022,9 +995,9 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 		isNilVarName := genTempVarPfx + "n" + i
 		var labelUsed bool
 		var t2 reflect.StructField
-		varname3 := varname
 		{
 			t2typ := t
+			varname3 := varname
 			for ij, ix := range si.is {
 				if uint8(ij) == si.nis {
 					break
@@ -1061,8 +1034,7 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 		if si.omitEmpty() {
 			x.linef("if %s[%v] {", numfieldsvar, j)
 		}
-		// xdebug2f("varname: %s, t2.Type: %s", varname3, t2.Type)
-		x.encVar(varname3, t2.Type)
+		x.encVar(varname+"."+t2.Name, t2.Type)
 		if si.omitEmpty() {
 			x.linef("} else {")
 			x.encZero(t2.Type)
@@ -1100,10 +1072,10 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 		x.line("r.WriteMapElemValue()")
 		if labelUsed {
 			x.line("if " + isNilVarName + " { r.EncodeNil() } else { ")
-			x.encVar(varname3, t2.Type)
+			x.encVar(varname+"."+t2.Name, t2.Type)
 			x.line("}")
 		} else {
-			x.encVar(varname3, t2.Type)
+			x.encVar(varname+"."+t2.Name, t2.Type)
 		}
 		if si.omitEmpty() {
 			x.line("}")
@@ -1178,11 +1150,11 @@ func (x *genRunner) encMapFallback(varname string, t reflect.Type) {
 }
 
 func (x *genRunner) decVarInitPtr(varname, nilvar string, t reflect.Type, si *structFieldInfo,
-	newbuf, nilbuf *genBuf) (varname3 string, t2 reflect.StructField) {
+	newbuf, nilbuf *genBuf) (t2 reflect.StructField) {
 	//we must accommodate anonymous fields, where the embedded field is a nil pointer in the value.
 	// t2 = t.FieldByIndex(si.is)
-	varname3 = varname
 	t2typ := t
+	varname3 := varname
 	t2kind := t2typ.Kind()
 	var nilbufed bool
 	if si != nil {
@@ -1234,7 +1206,7 @@ func (x *genRunner) decVarInitPtr(varname, nilvar string, t reflect.Type, si *st
 			nilbuf.s("}")
 		}
 	}
-	return
+	return t2
 }
 
 // decVar takes a variable called varname, of type t
@@ -1410,7 +1382,7 @@ func (x *genRunner) dec(varname string, t reflect.Type, isptr bool) {
 			x.linef("%s%s = r.DecodeBytes(%s(%s[]byte)(%s), false)",
 				ptrPfx, varname, ptrPfx, ptrPfx, varname)
 		} else if fastpathAV.index(rtid) != -1 {
-			g := x.newFastpathGenV(t)
+			g := x.newGenV(t)
 			x.linef("z.F.%sX(%s%s, d)", g.MethodNamePfx("Dec", false), addrPfx, varname)
 		} else {
 			x.xtraSM(varname, t, false, isptr)
@@ -1422,7 +1394,7 @@ func (x *genRunner) dec(varname string, t reflect.Type, isptr bool) {
 		// - if elements are primitives or Selfers, call dedicated function on each member.
 		// - else call Encoder.encode(XXX) on it.
 		if fastpathAV.index(rtid) != -1 {
-			g := x.newFastpathGenV(t)
+			g := x.newGenV(t)
 			x.linef("z.F.%sX(%s%s, d)", g.MethodNamePfx("Dec", false), addrPfx, varname)
 		} else {
 			x.xtraSM(varname, t, false, isptr)
@@ -1610,9 +1582,9 @@ func (x *genRunner) decStructMapSwitch(kName string, varname string, rtid uintpt
 		x.line("case \"" + si.encName + "\":")
 		newbuf.reset()
 		nilbuf.reset()
-		varname3, t2 := x.decVarInitPtr(varname, "", t, si, &newbuf, &nilbuf)
+		t2 := x.decVarInitPtr(varname, "", t, si, &newbuf, &nilbuf)
 		x.linef("if r.TryDecodeAsNil() { %s } else { %s", nilbuf.buf, newbuf.buf)
-		x.decVarMain(varname3, x.varsfx(), t2.Type, false)
+		x.decVarMain(varname+"."+t2.Name, x.varsfx(), t2.Type, false)
 		x.line("}")
 	}
 	x.line("default:")
@@ -1677,9 +1649,9 @@ func (x *genRunner) decStructArray(varname, lenvarname, breakString string, rtid
 		x.line("r.ReadArrayElem()")
 		newbuf.reset()
 		nilbuf.reset()
-		varname3, t2 := x.decVarInitPtr(varname, "", t, si, &newbuf, &nilbuf)
+		t2 := x.decVarInitPtr(varname, "", t, si, &newbuf, &nilbuf)
 		x.linef("if r.TryDecodeAsNil() { %s } else { %s", nilbuf.buf, newbuf.buf)
-		x.decVarMain(varname3, x.varsfx(), t2.Type, false)
+		x.decVarMain(varname+"."+t2.Name, x.varsfx(), t2.Type, false)
 		x.line("}")
 	}
 	// read remaining values and throw away.
@@ -1729,17 +1701,15 @@ func (x *genRunner) decStruct(varname string, rtid uintptr, t reflect.Type) {
 
 // --------
 
-type fastpathGenV struct {
-	// fastpathGenV is either a primitive (Primitive != "") or a map (MapKey != "") or a slice
-	MapKey      string
-	Elem        string
-	Primitive   string
-	Size        int
-	NoCanonical bool
+type genV struct {
+	// genV is either a primitive (Primitive != "") or a map (MapKey != "") or a slice
+	MapKey    string
+	Elem      string
+	Primitive string
+	Size      int
 }
 
-func (x *genRunner) newFastpathGenV(t reflect.Type) (v fastpathGenV) {
-	v.NoCanonical = !genFastpathCanonical
+func (x *genRunner) newGenV(t reflect.Type) (v genV) {
 	switch t.Kind() {
 	case reflect.Slice, reflect.Array:
 		te := t.Elem()
@@ -1751,12 +1721,12 @@ func (x *genRunner) newFastpathGenV(t reflect.Type) (v fastpathGenV) {
 		v.MapKey = x.genTypeName(tk)
 		v.Size = int(te.Size() + tk.Size())
 	default:
-		panic("unexpected type for newFastpathGenV. Requires map or slice type")
+		panic("unexpected type for newGenV. Requires map or slice type")
 	}
 	return
 }
 
-func (x *fastpathGenV) MethodNamePfx(prefix string, prim bool) string {
+func (x *genV) MethodNamePfx(prefix string, prim bool) string {
 	var name []byte
 	if prefix != "" {
 		name = append(name, prefix...)
@@ -1908,7 +1878,7 @@ func genIsImmutable(t reflect.Type) (v bool) {
 
 type genInternal struct {
 	Version int
-	Values  []fastpathGenV
+	Values  []genV
 }
 
 func (x genInternal) FastpathLen() (l int) {
@@ -1961,13 +1931,9 @@ func genInternalNonZeroValue(s string) string {
 
 func genInternalEncCommandAsString(s string, vname string) string {
 	switch s {
-	case "uint64":
-		return "ee.EncodeUint(" + vname + ")"
-	case "uint", "uint8", "uint16", "uint32":
+	case "uint", "uint8", "uint16", "uint32", "uint64":
 		return "ee.EncodeUint(uint64(" + vname + "))"
-	case "int64":
-		return "ee.EncodeInt(" + vname + ")"
-	case "int", "int8", "int16", "int32":
+	case "int", "int8", "int16", "int32", "int64":
 		return "ee.EncodeInt(int64(" + vname + "))"
 	case "string":
 		return "if e.h.StringToRaw { ee.EncodeStringBytesRaw(bytesView(" + vname + ")) " +
@@ -2026,11 +1992,12 @@ func genInternalDecCommandAsString(s string) string {
 func genInternalSortType(s string, elem bool) string {
 	for _, v := range [...]string{"int", "uint", "float", "bool", "string"} {
 		if strings.HasPrefix(s, v) {
-			if v == "int" || v == "uint" || v == "float" {
-				v += "64"
-			}
 			if elem {
-				return v
+				if v == "int" || v == "uint" || v == "float" {
+					return v + "64"
+				} else {
+					return v
+				}
 			}
 			return v + "Slice"
 		}
@@ -2057,31 +2024,7 @@ var genInternalTmplFuncs template.FuncMap
 var genInternalOnce sync.Once
 
 func genInternalInit() {
-	wordSizeBytes := int(intBitsize) / 8
-
-	typesizes := map[string]int{
-		"interface{}": 2 * wordSizeBytes,
-		"string":      2 * wordSizeBytes,
-		"uint":        1 * wordSizeBytes,
-		"uint8":       1,
-		"uint16":      2,
-		"uint32":      4,
-		"uint64":      8,
-		"uintptr":     1 * wordSizeBytes,
-		"int":         1 * wordSizeBytes,
-		"int8":        1,
-		"int16":       2,
-		"int32":       4,
-		"int64":       8,
-		"float32":     4,
-		"float64":     8,
-		"bool":        1,
-	}
-
-	// keep as slice, so it is in specific iteration order.
-	// Initial order was uint64, string, interface{}, int, int64, ...
-
-	var types = [...]string{
+	types := [...]string{
 		"interface{}",
 		"string",
 		"float32",
@@ -2099,88 +2042,60 @@ func genInternalInit() {
 		"int64",
 		"bool",
 	}
-
-	var primitivetypes, slicetypes, mapkeytypes, mapvaltypes []string
-
-	primitivetypes = types[:]
-	slicetypes = types[:]
-	mapkeytypes = types[:]
-	mapvaltypes = types[:]
-
-	if genFastpathTrimTypes {
-		mapkeytypes = []string{
-			//"interface{}",
-			"string",
-			//"float32",
-			//"float64",
-			"uint",
-			"uint8",
-			//"uint16",
-			//"uint32",
-			"uint64",
-			"uintptr",
-			"int",
-			//"int8",
-			//"int16",
-			//"int32",
-			"int64",
-			// "bool",
-		}
-
-		mapvaltypes = []string{
-			"interface{}",
-			"string",
-			"uint",
-			"uint8",
-			//"uint16",
-			//"uint32",
-			"uint64",
-			"uintptr",
-			"int",
-			//"int8",
-			//"int16",
-			//"int32",
-			"int64",
-			"float32",
-			"float64",
-			"bool",
-		}
+	// keep as slice, so it is in specific iteration order.
+	// Initial order was uint64, string, interface{}, int, int64
+	mapvaltypes := [...]string{
+		"interface{}",
+		"string",
+		"uint",
+		"uint8",
+		"uint16",
+		"uint32",
+		"uint64",
+		"uintptr",
+		"int",
+		"int8",
+		"int16",
+		"int32",
+		"int64",
+		"float32",
+		"float64",
+		"bool",
 	}
+	wordSizeBytes := int(intBitsize) / 8
 
-	// var mapkeytypes [len(&types) - 1]string // skip bool
-	// copy(mapkeytypes[:], types[:])
-
-	// var mb []byte
-	// mb = append(mb, '|')
-	// for _, s := range mapkeytypes {
-	// 	mb = append(mb, s...)
-	// 	mb = append(mb, '|')
-	// }
-	// var mapkeytypestr = string(mb)
-
+	mapvaltypes2 := map[string]int{
+		"interface{}": 2 * wordSizeBytes,
+		"string":      2 * wordSizeBytes,
+		"uint":        1 * wordSizeBytes,
+		"uint8":       1,
+		"uint16":      2,
+		"uint32":      4,
+		"uint64":      8,
+		"uintptr":     1 * wordSizeBytes,
+		"int":         1 * wordSizeBytes,
+		"int8":        1,
+		"int16":       2,
+		"int32":       4,
+		"int64":       8,
+		"float32":     4,
+		"float64":     8,
+		"bool":        1,
+	}
 	var gt = genInternal{Version: genVersion}
 
 	// For each slice or map type, there must be a (symmetrical) Encode and Decode fast-path function
-
-	for _, s := range primitivetypes {
-		gt.Values = append(gt.Values,
-			fastpathGenV{Primitive: s, Size: typesizes[s], NoCanonical: !genFastpathCanonical})
-	}
-	for _, s := range slicetypes {
+	for _, s := range types {
+		gt.Values = append(gt.Values, genV{Primitive: s, Size: mapvaltypes2[s]})
 		// if s != "uint8" { // do not generate fast path for slice of bytes. Treat specially already.
-		// 	gt.Values = append(gt.Values, fastpathGenV{Elem: s, Size: typesizes[s]})
+		// 	gt.Values = append(gt.Values, genV{Elem: s, Size: mapvaltypes2[s]})
 		// }
-		gt.Values = append(gt.Values,
-			fastpathGenV{Elem: s, Size: typesizes[s], NoCanonical: !genFastpathCanonical})
-	}
-	for _, s := range mapkeytypes {
-		// if _, ok := typesizes[s]; !ok {
-		// if strings.Contains(mapkeytypestr, "|"+s+"|") {
-		// 	gt.Values = append(gt.Values, fastpathGenV{MapKey: s, Elem: s, Size: 2 * typesizes[s]})
-		// }
+		gt.Values = append(gt.Values, genV{Elem: s, Size: mapvaltypes2[s]})
+		if _, ok := mapvaltypes2[s]; !ok {
+			gt.Values = append(gt.Values, genV{MapKey: s, Elem: s, Size: 2 * mapvaltypes2[s]})
+		}
 		for _, ms := range mapvaltypes {
-			gt.Values = append(gt.Values,
-				fastpathGenV{MapKey: s, Elem: ms, Size: typesizes[s] + typesizes[ms], NoCanonical: !genFastpathCanonical})
+			gt.Values = append(gt.Values, genV{MapKey: s, Elem: ms, Size: mapvaltypes2[s] + mapvaltypes2[ms]})
 		}
 	}
 

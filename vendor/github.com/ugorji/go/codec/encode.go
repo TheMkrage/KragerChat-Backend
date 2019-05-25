@@ -30,7 +30,6 @@ var errEncoderNotInitialized = errors.New("Encoder not initialized")
 type encWriter interface {
 	writeb([]byte)
 	writestr(string)
-	writeqstr(string) // write string wrapped in quotes ie "..."
 	writen1(byte)
 	writen2(byte, byte)
 	end()
@@ -49,6 +48,10 @@ type encDriver interface {
 	// encodeExtPreamble(xtag byte, length int)
 	EncodeRawExt(re *RawExt, e *Encoder)
 	EncodeExt(v interface{}, xtag uint64, ext Ext, e *Encoder)
+	// Deprecated: use EncodeStringEnc instead
+	EncodeString(c charEncoding, v string)
+	// Deprecated: use EncodeStringBytesRaw instead
+	EncodeStringBytes(c charEncoding, v []byte)
 	EncodeStringEnc(c charEncoding, v string) // c cannot be cRAW
 	// EncodeSymbol(v string)
 	EncodeStringBytesRaw(v []byte)
@@ -247,10 +250,6 @@ func (z *ioEncWriter) writestr(s string) {
 	}
 }
 
-func (z *ioEncWriter) writeqstr(s string) {
-	writestr("\"" + s + "\"")
-}
-
 func (z *ioEncWriter) writen1(b byte) {
 	if err := z.bw.WriteByte(b); err != nil {
 		panic(err)
@@ -289,27 +288,21 @@ func (z *ioEncWriter) end() {
 
 // bufioEncWriter
 type bufioEncWriter struct {
-	w io.Writer
-
 	buf []byte
-
-	n int
+	w   io.Writer
+	n   int
+	sz  int // buf size
 
 	// Extensions can call Encode() within a current Encode() call.
 	// We need to know when the top level Encode() call returns,
 	// so we can decide whether to Release() or not.
 	calls uint16 // what depth in mustDecode are we in now.
 
-	sz int // buf size
-	// _ uint64 // padding (cache-aligned)
+	_ [6]uint8 // padding
 
-	// ---- cache line
-
-	// write-most fields below
-
-	// less used fields
 	bytesBufPooler
 
+	_ [1]uint64 // padding
 	// a int
 	// b   [4]byte
 	// err
@@ -380,29 +373,6 @@ LOOP:
 	z.n += copy(z.buf[z.n:], s)
 }
 
-func (z *bufioEncWriter) writeqstr(s string) {
-	// z.writen1('"')
-	// z.writestr(s)
-	// z.writen1('"')
-
-	if z.n+len(s)+2 > len(z.buf) {
-		z.flush()
-	}
-	z.buf[z.n] = '"'
-	z.n++
-LOOP:
-	a := len(z.buf) - z.n
-	if len(s)+1 > a {
-		z.n += copy(z.buf[z.n:], s[:a])
-		s = s[a:]
-		z.flush()
-		goto LOOP
-	}
-	z.n += copy(z.buf[z.n:], s)
-	z.buf[z.n] = '"'
-	z.n++
-}
-
 func (z *bufioEncWriter) writen1(b1 byte) {
 	if 1 > len(z.buf)-z.n {
 		z.flush()
@@ -440,15 +410,6 @@ func (z *bytesEncAppender) writeb(s []byte) {
 }
 func (z *bytesEncAppender) writestr(s string) {
 	z.b = append(z.b, s...)
-}
-func (z *bytesEncAppender) writeqstr(s string) {
-	// z.writen1('"')
-	// z.writestr(s)
-	// z.writen1('"')
-	z.b = append(append(append(z.b, '"'), s...), '"')
-	// z.b = append(z.b, '"')
-	// z.b = append(z.b, s...)
-	// z.b = append(z.b, '"')
 }
 func (z *bytesEncAppender) writen1(b1 byte) {
 	z.b = append(z.b, b1)
@@ -983,13 +944,13 @@ func (e *Encoder) kMapCanonical(rtkey reflect.Type, rv reflect.Value, mks []refl
 			e.encodeValue(rv.MapIndex(mksv[i].r), valFn, true)
 		}
 	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint, reflect.Uintptr:
-		mksv := make([]uint64Rv, len(mks))
+		mksv := make([]uintRv, len(mks))
 		for i, k := range mks {
 			v := &mksv[i]
 			v.r = k
 			v.v = k.Uint()
 		}
-		sort.Sort(uint64RvSlice(mksv))
+		sort.Sort(uintRvSlice(mksv))
 		for i := range mksv {
 			if elemsep {
 				ee.WriteMapElemKey()
@@ -1001,13 +962,13 @@ func (e *Encoder) kMapCanonical(rtkey reflect.Type, rv reflect.Value, mks []refl
 			e.encodeValue(rv.MapIndex(mksv[i].r), valFn, true)
 		}
 	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
-		mksv := make([]int64Rv, len(mks))
+		mksv := make([]intRv, len(mks))
 		for i, k := range mks {
 			v := &mksv[i]
 			v.r = k
 			v.v = k.Int()
 		}
-		sort.Sort(int64RvSlice(mksv))
+		sort.Sort(intRvSlice(mksv))
 		for i := range mksv {
 			if elemsep {
 				ee.WriteMapElemKey()
@@ -1019,13 +980,13 @@ func (e *Encoder) kMapCanonical(rtkey reflect.Type, rv reflect.Value, mks []refl
 			e.encodeValue(rv.MapIndex(mksv[i].r), valFn, true)
 		}
 	case reflect.Float32:
-		mksv := make([]float64Rv, len(mks))
+		mksv := make([]floatRv, len(mks))
 		for i, k := range mks {
 			v := &mksv[i]
 			v.r = k
 			v.v = k.Float()
 		}
-		sort.Sort(float64RvSlice(mksv))
+		sort.Sort(floatRvSlice(mksv))
 		for i := range mksv {
 			if elemsep {
 				ee.WriteMapElemKey()
@@ -1037,13 +998,13 @@ func (e *Encoder) kMapCanonical(rtkey reflect.Type, rv reflect.Value, mks []refl
 			e.encodeValue(rv.MapIndex(mksv[i].r), valFn, true)
 		}
 	case reflect.Float64:
-		mksv := make([]float64Rv, len(mks))
+		mksv := make([]floatRv, len(mks))
 		for i, k := range mks {
 			v := &mksv[i]
 			v.r = k
 			v.v = k.Float()
 		}
-		sort.Sort(float64RvSlice(mksv))
+		sort.Sort(floatRvSlice(mksv))
 		for i := range mksv {
 			if elemsep {
 				ee.WriteMapElemKey()
@@ -1110,12 +1071,12 @@ type encWriterSwitch struct {
 	wb bytesEncAppender
 	wf *bufioEncWriter
 	// typ  entryType
-	bytes bool // encoding to []byte
-	esep  bool // whether it has elem separators
-	isas  bool // whether e.as != nil
-	js    bool // is json encoder?
-	be    bool // is binary encoder?
-	// _     [2]byte // padding
+	bytes bool    // encoding to []byte
+	esep  bool    // whether it has elem separators
+	isas  bool    // whether e.as != nil
+	js    bool    // is json encoder?
+	be    bool    // is binary encoder?
+	_     [2]byte // padding
 	// _    [2]uint64 // padding
 	// _    uint64    // padding
 }
@@ -1125,13 +1086,6 @@ func (z *encWriterSwitch) writeb(s []byte) {
 		z.wb.writeb(s)
 	} else {
 		z.wf.writeb(s)
-	}
-}
-func (z *encWriterSwitch) writeqstr(s string) {
-	if z.bytes {
-		z.wb.writeqstr(s)
-	} else {
-		z.wf.writeqstr(s)
 	}
 }
 func (z *encWriterSwitch) writestr(s string) {
@@ -1281,19 +1235,18 @@ type Encoder struct {
 	// bw *bufio.Writer
 	as encDriverAsis
 
+	err error
+
 	h  *BasicHandle
 	hh Handle
-
 	// ---- cpu cache line boundary? + 3
 	encWriterSwitch
 
-	err error
-
-	// ---- cpu cache line boundary
-	// ---- writable fields during execution --- *try* to keep in sep cache line
 	ci set
 
-	b [(5 * 8)]byte // for encoding chan byte, (non-addressable) [N]byte, etc
+	b [(5 * 8)]byte // for encoding chan or (non-addressable) [N]byte
+
+	// ---- writable fields during execution --- *try* to keep in sep cache line
 
 	// ---- cpu cache line boundary?
 	// b [scratchByteArrayLen]byte
@@ -1503,14 +1456,10 @@ func (e *Encoder) Encode(v interface{}) (err error) {
 			err = e.w.endErr()
 			x := recover()
 			if x == nil {
-				if e.err != err {
-					e.err = err
-				}
+				e.err = err
 			} else {
 				panicValToErr(e, x, &e.err)
-				if e.err != err {
-					err = e.err
-				}
+				err = e.err
 			}
 		}()
 	}
@@ -1828,20 +1777,18 @@ func encStructFieldKey(encName string, ee encDriver, w *encWriterSwitch,
 	// since keyType is typically valueTypeString, branch prediction is pretty good.
 	if keyType == valueTypeString {
 		if js && encNameAsciiAlphaNum { // keyType == valueTypeString
-			w.writeqstr(encName)
-			// ----
 			// w.writen1('"')
 			// w.writestr(encName)
 			// w.writen1('"')
 			// ----
 			// w.writestr(`"` + encName + `"`)
 			// ----
-			// // do concat myself, so it is faster than the generic string concat
-			// b := make([]byte, len(encName)+2)
-			// copy(b[1:], encName)
-			// b[0] = '"'
-			// b[len(b)-1] = '"'
-			// w.writeb(b)
+			// do concat myself, so it is faster than the generic string concat
+			b := make([]byte, len(encName)+2)
+			copy(b[1:], encName)
+			b[0] = '"'
+			b[len(b)-1] = '"'
+			w.writeb(b)
 		} else { // keyType == valueTypeString
 			ee.EncodeStringEnc(cUTF8, encName)
 		}

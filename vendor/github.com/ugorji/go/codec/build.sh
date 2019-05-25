@@ -116,18 +116,17 @@ run("fast-path.go.tmpl", "fast-path.generated.go")
 run("gen-helper.go.tmpl", "gen-helper.generated.go")
 run("mammoth-test.go.tmpl", "mammoth_generated_test.go")
 run("mammoth2-test.go.tmpl", "mammoth2_generated_test.go")
-// run("sort-slice.go.tmpl", "sort-slice.generated.go")
 }
 EOF
 
     sed -e 's+// __DO_NOT_REMOVE__NEEDED_FOR_REPLACING__IMPORT_PATH__FOR_CODEC_BENCH__+import . "github.com/ugorji/go/codec"+' \
         shared_test.go > bench/shared_test.go
-
+    
     # explicitly return 0 if this passes, else return 1
-    go run -tags "prebuild" prebuild.go || return 1
-    go run -tags "notfastpath safe codecgen.exec" gen-from-tmpl.generated.go || return 1
-    rm -f gen-from-tmpl.*generated.go
-    return 0
+    go run -tags "notfastpath safe codecgen.exec" gen-from-tmpl.generated.go &&
+        rm -f gen-from-tmpl.*generated.go &&
+        return 0
+    return 1
 }
 
 _codegenerators() {
@@ -154,9 +153,9 @@ _codegenerators() {
 _prebuild() {
     echo "prebuild: zforce: $zforce"
     local d="$PWD"
-    local zfin="test_values.generated.go"
-    local zfin2="test_values_flex.generated.go"
-    local zpkg="github.com/ugorji/go/codec"
+    zfin="test_values.generated.go"
+    zfin2="test_values_flex.generated.go"
+    zpkg="github.com/ugorji/go/codec"
     # zpkg=${d##*/src/}
     # zgobase=${d%%/src/*}
     # rm -f *_generated_test.go 
@@ -169,14 +168,13 @@ _prebuild() {
         if [[ $zforce ]]; then go install ${zargs[*]} .; fi &&
         echo "prebuild done successfully"
     rm -f $d/$zfin $d/$zfin2
-    # unset zfin zfin2 zpkg
+    unset zfin zfin2 zpkg
 }
 
 _make() {
-    local makeforce=${zforce}
     zforce=1
     (cd codecgen && go install ${zargs[*]} .) && _prebuild && go install ${zargs[*]} .
-    zforce=${makeforce}
+    unset zforce
 }
 
 _clean() {
@@ -201,7 +199,6 @@ _release() {
 EOF
     # # go 1.6 and below kept giving memory errors on Mac OS X during SDK build or go run execution,
     # # that is fine, as we only explicitly test the last 3 releases and tip (2 years).
-    local makeforce=${zforce}
     zforce=1
     for i in 1.10 1.11 1.12 master
     do
@@ -218,7 +215,7 @@ EOF
             _tests "$@"
         if [[ "$?" != 0 ]]; then return 1; fi
     done
-    zforce=${makeforce}
+    unset zforce
     echo "++++++++ RELEASE TEST SUITES ALL PASSED ++++++++"
 }
 
@@ -234,10 +231,7 @@ EOF
 _main() {
     if [[ -z "$1" ]]; then _usage; return 1; fi
     local x
-    local zforce
-    local zargs
-    local zbenchflags
-    # unset zforce
+    unset zforce
     zargs=()
     zbenchflags=""
     OPTIND=1
@@ -266,7 +260,7 @@ _main() {
         'xz') _analyze "$@" ;;
         'xb') _bench "$@" ;;
     esac
-    # unset zforce zargs zbenchflags
+    unset zforce zargs zbenchflags
 }
 
 [ "." = `dirname $0` ] && _main "$@"

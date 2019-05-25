@@ -235,8 +235,22 @@ func (e *cborEncDriver) WriteArrayEnd() {
 	}
 }
 
+func (e *cborEncDriver) EncodeString(c charEncoding, v string) {
+	e.encStringBytesS(cborBaseString, v)
+}
+
 func (e *cborEncDriver) EncodeStringEnc(c charEncoding, v string) {
 	e.encStringBytesS(cborBaseString, v)
+}
+
+func (e *cborEncDriver) EncodeStringBytes(c charEncoding, v []byte) {
+	if v == nil {
+		e.EncodeNil()
+	} else if c == cRAW {
+		e.encStringBytesS(cborBaseBytes, stringView(v))
+	} else {
+		e.encStringBytesS(cborBaseString, stringView(v))
+	}
 }
 
 func (e *cborEncDriver) EncodeStringBytesRaw(v []byte) {
@@ -721,7 +735,7 @@ type CborHandle struct {
 	// If unset, we encode time.Time using seconds past epoch.
 	TimeRFC3339 bool
 
-	_ [1]uint64 // padding (cache-aligned)
+	// _ [1]uint64 // padding
 }
 
 // Name returns the name of the handle: cbor

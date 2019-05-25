@@ -23,8 +23,8 @@ const (
 const (
 	decDefMaxDepth         = 1024 // maximum depth
 	decDefSliceCap         = 8
-	decDefChanCap          = 64                // should be large, as cap cannot be expanded
-	decScratchByteArrayLen = cacheLineSize - 4 // + (8 * 2) // - (8 * 1)
+	decDefChanCap          = 64            // should be large, as cap cannot be expanded
+	decScratchByteArrayLen = cacheLineSize // + (8 * 2) // - (8 * 1)
 )
 
 var (
@@ -95,6 +95,10 @@ type decDriver interface {
 	// extensions should also use readx to decode them, for efficiency.
 	// kInterface will extract the detached byte slice if it has to pass it outside its realm.
 	DecodeNaked()
+
+	// Deprecated: use DecodeInt64 and DecodeUint64 instead
+	// DecodeInt(bitsize uint8) (i int64)
+	// DecodeUint(bitsize uint8) (ui uint64)
 
 	DecodeInt64() (i int64)
 	DecodeUint64() (ui uint64)
@@ -322,8 +326,8 @@ type ioDecReader struct {
 	rr io.Reader
 	br io.ByteScanner
 
-	x [scratchByteArrayLen + 8]byte // for: get struct field name, swallow valueTypeBytes, etc
-	// _ [1]uint64                 // padding
+	x [scratchByteArrayLen]byte // for: get struct field name, swallow valueTypeBytes, etc
+	_ [1]uint64                 // padding
 }
 
 func (z *ioDecReader) reset(r io.Reader) {
@@ -545,7 +549,6 @@ func (z *ioDecReader) unreadn1() {
 
 type bufioDecReader struct {
 	ioDecReaderCommon
-	_ uint64 // padding (cache-aligned)
 
 	c   uint // cursor
 	buf []byte
@@ -560,6 +563,8 @@ type bufioDecReader struct {
 	calls uint16 // what depth in mustDecode are we in now.
 
 	_ [6]uint8 // padding
+
+	_ [1]uint64 // padding
 }
 
 func (z *bufioDecReader) reset(r io.Reader, bufsize int) {
@@ -1939,7 +1944,7 @@ type decNaked struct {
 
 	// state
 	v valueType
-	// _ [6]bool // padding
+	_ [6]bool // padding
 
 	// ru, ri, rf, rl, rs, rb, rt reflect.Value // mapping to the primitives above
 	//
@@ -2281,7 +2286,7 @@ type Decoder struct {
 
 	d decDriver
 
-	// NOTE: Decoder shouldn't call its read methods,
+	// NOTE: Decoder shouldn't call it's read methods,
 	// as the handler MAY need to do some coordination.
 	r *decReaderSwitch
 
@@ -2300,20 +2305,17 @@ type Decoder struct {
 	n decNaked
 
 	// cr containerStateRecv
+	err error
 
-	// _ [4]uint8 // padding
+	depth    int16
+	maxdepth int16
+
+	_ [4]uint8 // padding
 
 	is map[string]string // used for interning strings
 
-	_ uintptr // padding (so scratch is in its own cache line)
-
-	err error
-
 	// ---- cpu cache line boundary?
-	// ---- writable fields during execution --- *try* to keep in sep cache line
-	maxdepth int16
-	depth    int16
-	b        [decScratchByteArrayLen]byte // scratch buffer, used by Decoder and xxxEncDrivers
+	b [decScratchByteArrayLen]byte // scratch buffer, used by Decoder and xxxEncDrivers
 
 	// padding - false sharing help // modify 232 if Decoder struct changes.
 	// _ [cacheLineSize - 232%cacheLineSize]byte
@@ -2508,9 +2510,7 @@ func (d *Decoder) Decode(v interface{}) (err error) {
 		defer func() {
 			if x := recover(); x != nil {
 				panicValToErr(d, x, &d.err)
-				if d.err != err {
-					err = d.err
-				}
+				err = d.err
 			}
 		}()
 	}

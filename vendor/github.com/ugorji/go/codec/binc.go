@@ -110,7 +110,7 @@ type bincEncDriver struct {
 	encDriverTrackContainerWriter
 	noBuiltInTypes
 	// encNoSeparator
-	// _ [1]uint64 // padding
+	_ [1]uint64 // padding
 }
 
 func (e *bincEncDriver) EncodeNil() {
@@ -308,6 +308,18 @@ func (e *bincEncDriver) EncodeSymbol(v string) {
 	}
 }
 
+func (e *bincEncDriver) EncodeString(c charEncoding, v string) {
+	if e.c == containerMapKey && c == cUTF8 && (e.h.AsSymbols == 0 || e.h.AsSymbols == 1) {
+		e.EncodeSymbol(v)
+		return
+	}
+	l := uint64(len(v))
+	e.encBytesLen(c, l)
+	if l > 0 {
+		e.w.writestr(v)
+	}
+}
+
 func (e *bincEncDriver) EncodeStringEnc(c charEncoding, v string) {
 	if e.c == containerMapKey && c == cUTF8 && (e.h.AsSymbols == 0 || e.h.AsSymbols == 1) {
 		e.EncodeSymbol(v)
@@ -319,6 +331,18 @@ func (e *bincEncDriver) EncodeStringEnc(c charEncoding, v string) {
 		e.w.writestr(v)
 	}
 
+}
+
+func (e *bincEncDriver) EncodeStringBytes(c charEncoding, v []byte) {
+	if v == nil {
+		e.EncodeNil()
+		return
+	}
+	l := uint64(len(v))
+	e.encBytesLen(c, l)
+	if l > 0 {
+		e.w.writeb(v)
+	}
 }
 
 func (e *bincEncDriver) EncodeStringBytesRaw(v []byte) {
@@ -385,7 +409,7 @@ type bincDecDriver struct {
 	bd     byte
 	vd     byte
 	vs     byte
-	// _      [3]byte // padding
+	_      [3]byte // padding
 	// linear searching on this slice is ok,
 	// because we typically expect < 32 symbols in each stream.
 	s []bincDecSymbol
@@ -983,7 +1007,7 @@ type BincHandle struct {
 	// - n: none
 	// - a: all: same as m, s, ...
 
-	_ [1]uint64 // padding (cache-aligned)
+	// _ [1]uint64 // padding
 }
 
 // Name returns the name of the handle: binc
