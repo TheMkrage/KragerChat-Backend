@@ -50,7 +50,7 @@ func getMessages(c *gin.Context) {
 	pageSize := 50
 
 	q := datastore.NewQuery("Message").Order("Posted").Filter("ThreadID =", threadID).Offset(page * pageSize).Limit(pageSize)
-	var messages []Message
+	messages := []Message{}
 	_, err := client.GetAll(ctx, q, &messages)
 	if err != nil {
 		log.Printf("error: %v", err)
