@@ -28,6 +28,7 @@ type Message struct {
 	Photo          Photo  `json:"photo"`
 	ConnectionInfo ConnectionInfo
 	ThreadID       int `json:"threadID"`
+	SenderID       int `json:"senderID"`
 	Posted         time.Time
 }
 
