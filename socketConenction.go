@@ -69,6 +69,7 @@ func handleConnections(c *gin.Context) {
 			break
 		}
 		msg.Posted = time.Now()
+		msg.ThreadID = threadID
 		ctx := appengine.NewContext(c.Request)
 		key := datastore.IncompleteKey("Message", nil)
 		if _, err := client.Put(ctx, key, &msg); err != nil {
