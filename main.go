@@ -100,7 +100,15 @@ func joinThread(c *gin.Context) {
 		c.Writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	c.JSON(http.StatusCreated, subscription)
+
+	q := datastore.NewQuery("Thread").Filter("ID =", id)
+	threads := []Thread{}
+	if _, err := client.GetAll(ctx, q, &threads); err != nil {
+		log.Printf("error: %v", err)
+		c.Writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	c.JSON(http.StatusCreated, threads[0])
 }
 
 func main() {
